@@ -29,7 +29,7 @@ mongoose.connect(MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 })
-.then(() => console.log('✅ MongoDB Connected Successfully'))
+.then(() => console.log('✅ MongoDB Connected Successfully to 22299315 database'))
 .catch(err => {
     console.error('❌ MongoDB Connection Error:', err);
     process.exit(1);
@@ -44,14 +44,12 @@ if (!fs.existsSync('uploads')) {
 // Serve static files
 app.use('/uploads', express.static(join(__dirname, 'uploads')));
 
-// Import Routes
+// Import Routes (REMOVED staff routes)
 import activityRoutes from './routes/activities.js';
-import staffRoutes from './routes/staff.js';
 import notificationRoutes from './routes/notifications.js';
 
-// Use Routes
+// Use Routes (REMOVED staff routes)
 app.use('/api/activities', activityRoutes);
-app.use('/api/staff', staffRoutes);
 app.use('/api/notifications', notificationRoutes);
 
 // Health Check
@@ -59,7 +57,8 @@ app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'healthy',
         message: 'Smart Daycare Backend is running',
-        modules: ['Module 2: Staff Management', 'Module 3: Activity Management', 'Module 3: Notifications'],
+        database: '22299315',
+        modules: ['Module 3: Activity Management', 'Module 3: Notifications'],
         timestamp: new Date()
     });
 });
@@ -78,8 +77,11 @@ const PORT = process.env.PORT || 5560;
 
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`📁 Database: 22299315`);
+    console.log(`📁 Collections that will be created:`);
+    console.log(`   • activities`);
+    console.log(`   • notifications`);
     console.log(`📁 Modules loaded:`);
-    console.log(`   • Module 2, Feature 1: Staff Management`);
     console.log(`   • Module 3, Feature 1: Activity Management & Photos`);
     console.log(`   • Module 3, Feature 2: Parent Notifications`);
 });

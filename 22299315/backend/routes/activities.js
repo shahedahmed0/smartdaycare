@@ -3,7 +3,7 @@ import multer from 'multer';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import Activity from '../models/Activity.js';
-import NotificationService from '../services/NotificationService.js';
+import Notification from '../models/Notification.js';
 
 const router = express.Router();
 
@@ -38,7 +38,7 @@ const upload = multer({
     }
 });
 
-// CREATE Activity - Staff uploads daily logs with photos
+// CREATE Activity
 router.post('/', upload.array('photos', 5), async (req, res) => {
     try {
         const { staffId, childId, type, title, description, ...details } = req.body;
@@ -76,10 +76,26 @@ router.post('/', upload.array('photos', 5), async (req, res) => {
 
         // Create notification for parent
         try {
-            await NotificationService.createActivityNotification(staffId, childId, activity);
+            const parentId = 'PARENT001';
+            const notification = new Notification({
+                parentId,
+                childId,
+                type: 'activity',
+                title: `New ${type} Activity`,
+                message: `${title} - ${description.substring(0, 80)}...`,
+                priority: type === 'update' ? 'medium' : 'low',
+                activityId: activity._id,
+                metadata: {
+                    source: 'staff',
+                    staffId: staffId,
+                    timestamp: new Date()
+                }
+            });
+            
+            await notification.save();
+            console.log(`📢 Notification created for parent ${parentId}`);
         } catch (notificationError) {
             console.warn('Failed to create notification:', notificationError);
-            // Don't fail the activity creation
         }
 
         res.status(201).json({
@@ -98,19 +114,17 @@ router.post('/', upload.array('photos', 5), async (req, res) => {
     }
 });
 
-// READ Activities for Staff - Get their activity history
+// READ Activities for Staff
 router.get('/staff/:staffId', async (req, res) => {
     try {
         const { staffId } = req.params;
         const { type, limit = 20 } = req.query;
         
-        // Build query
         const query = { staffId };
         if (type && type !== 'all') {
             query.type = type;
         }
 
-        // Get activities
         const activities = await Activity.find(query)
             .sort({ timestamp: -1 })
             .limit(parseInt(limit));
@@ -130,19 +144,17 @@ router.get('/staff/:staffId', async (req, res) => {
     }
 });
 
-// READ Activities for Parent - View child's activities
+// READ Activities for Parent
 router.get('/parent/:childId', async (req, res) => {
     try {
         const { childId } = req.params;
         const { filter = 'all', limit = 50 } = req.query;
         
-        // Build query
         const query = { childId };
         if (filter && filter !== 'all') {
             query.type = filter;
         }
 
-        // Get activities
         const activities = await Activity.find(query)
             .sort({ timestamp: -1 })
             .limit(parseInt(limit));
@@ -162,30 +174,45 @@ router.get('/parent/:childId', async (req, res) => {
     }
 });
 
-// READ Daily Summary for Child
+// READ Daily Summary for Child - FIXED VERSION
 router.get('/summary/:childId', async (req, res) => {
     try {
         const { childId } = req.params;
         
         // Get today's date range
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
         
-        // Get today's activities
+        console.log('📅 Summary Query:', {
+            childId,
+            date: today.toISOString().split('T')[0],
+            startOfDay: startOfDay.toISOString(),
+            endOfDay: endOfDay.toISOString()
+        });
+
+        // Get today's activities - Check both timestamp and createdAt
         const activities = await Activity.find({
             childId,
-            timestamp: {
-                $gte: today,
-                $lt: tomorrow
-            }
+            $or: [
+                { timestamp: { $gte: startOfDay, $lte: endOfDay } },
+                { createdAt: { $gte: startOfDay, $lte: endOfDay } }
+            ]
         });
+
+        console.log(`📊 Found ${activities.length} activities for today`);
 
         // Calculate summary
         const meals = activities.filter(a => a.type === 'meal');
         const naps = activities.filter(a => a.type === 'nap');
-        const photoCount = activities.reduce((total, activity) => total + (activity.photos?.length || 0), 0);
+        
+        // Count ALL photos from today's activities
+        let photoCount = 0;
+        activities.forEach(activity => {
+            if (activity.photos && Array.isArray(activity.photos)) {
+                photoCount += activity.photos.length;
+            }
+        });
 
         res.json({
             success: true,
@@ -194,15 +221,107 @@ router.get('/summary/:childId', async (req, res) => {
                 meals: meals.length,
                 naps: naps.length,
                 photos: photoCount,
-                lastUpdated: new Date()
+                debug: {
+                    activitiesToday: activities.length,
+                    dateQueried: today.toISOString().split('T')[0],
+                    mealActivities: meals.map(m => ({ title: m.title, type: m.type })),
+                    napActivities: naps.map(n => ({ title: n.title, type: n.type }))
+                }
             }
         });
 
     } catch (error) {
-        console.error('Error fetching summary:', error);
+        console.error('❌ Error fetching summary:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch summary'
+            message: 'Failed to fetch summary',
+            error: error.message
+        });
+    }
+});
+
+// Emergency alert endpoint
+router.post('/:childId/emergency', async (req, res) => {
+    try {
+        const { childId } = req.params;
+        const { staffId, emergencyType, details, symptoms, severity } = req.body;
+        
+        const parentId = 'PARENT001';
+        const notification = new Notification({
+            parentId,
+            childId,
+            type: 'emergency',
+            title: `🚨 ${emergencyType === 'illness' ? 'Health Alert' : 'Emergency Alert'}`,
+            message: emergencyType === 'illness' 
+                ? `${childId}: ${symptoms}. Severity: ${severity}`
+                : details,
+            priority: 'urgent',
+            metadata: {
+                source: 'staff',
+                emergencyType,
+                symptoms,
+                severity,
+                timestamp: new Date()
+            }
+        });
+        
+        await notification.save();
+        
+        res.json({
+            success: true,
+            message: 'Emergency notification sent to parent',
+            data: notification
+        });
+        
+    } catch (error) {
+        console.error('Error creating emergency notification:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to send emergency notification'
+        });
+    }
+});
+
+// Pickup reminder endpoint
+router.post('/:childId/pickup-reminder', async (req, res) => {
+    try {
+        const { childId } = req.params;
+        const { pickupTime } = req.body;
+        
+        const parentId = 'PARENT001';
+        const formattedTime = new Date(pickupTime).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        const notification = new Notification({
+            parentId,
+            childId,
+            type: 'reminder',
+            title: `⏰ Pickup Reminder`,
+            message: `Don't forget to pick up ${childId} at ${formattedTime}`,
+            priority: 'high',
+            metadata: {
+                source: 'system',
+                reminderType: 'pickup',
+                pickupTime,
+                timestamp: new Date()
+            }
+        });
+        
+        await notification.save();
+        
+        res.json({
+            success: true,
+            message: 'Pickup reminder scheduled',
+            data: notification
+        });
+        
+    } catch (error) {
+        console.error('Error creating pickup reminder:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to schedule pickup reminder'
         });
     }
 });
@@ -235,59 +354,5 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-// Emergency alert endpoint
-router.post('/:childId/emergency', async (req, res) => {
-    try {
-        const { childId } = req.params;
-        const { staffId, emergencyType, details, symptoms, severity } = req.body;
-        
-        const notification = await NotificationService.createEmergencyNotification(
-            childId,
-            emergencyType,
-            details,
-            symptoms,
-            severity
-        );
-        
-        res.json({
-            success: true,
-            message: 'Emergency notification sent to parent',
-            data: notification
-        });
-        
-    } catch (error) {
-        console.error('Error creating emergency notification:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to send emergency notification'
-        });
-    }
-});
-
-// Pickup reminder endpoint
-router.post('/:childId/pickup-reminder', async (req, res) => {
-    try {
-        const { childId } = req.params;
-        const { pickupTime } = req.body;
-        
-        const notification = await NotificationService.createPickupReminder(
-            childId,
-            pickupTime
-        );
-        
-        res.json({
-            success: true,
-            message: 'Pickup reminder scheduled',
-            data: notification
-        });
-        
-    } catch (error) {
-        console.error('Error creating pickup reminder:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to schedule pickup reminder'
-        });
-    }
-});
-
+// ADD THIS LINE AT THE END - MUST BE PRESENT
 export default router;

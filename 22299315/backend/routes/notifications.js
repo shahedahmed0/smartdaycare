@@ -3,7 +3,7 @@ import Notification from '../models/Notification.js';
 
 const router = express.Router();
 
-// Get notifications for a parent
+// Get notifications for a parent - FIXED QUERY
 router.get('/parent/:parentId', async (req, res) => {
     try {
         const { parentId } = req.params;
@@ -35,7 +35,42 @@ router.get('/parent/:parentId', async (req, res) => {
         console.error('Error fetching notifications:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch notifications'
+            message: 'Failed to fetch notifications',
+            error: error.message
+        });
+    }
+});
+
+// Get all notifications count for debugging
+router.get('/debug/:parentId', async (req, res) => {
+    try {
+        const { parentId } = req.params;
+        
+        const allNotifications = await Notification.find({ parentId });
+        const unreadCount = await Notification.countDocuments({ parentId, read: false });
+        const totalCount = await Notification.countDocuments({ parentId });
+        
+        res.json({
+            success: true,
+            data: {
+                totalCount,
+                unreadCount,
+                allNotifications: allNotifications.map(n => ({
+                    id: n._id,
+                    title: n.title,
+                    type: n.type,
+                    read: n.read,
+                    createdAt: n.createdAt,
+                    parentId: n.parentId
+                }))
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error debugging notifications:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to debug notifications'
         });
     }
 });

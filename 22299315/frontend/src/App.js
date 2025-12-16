@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import StaffPage from './pages/StaffPage';
 import ParentPage from './pages/ParentPage';
-import AdminPortal from './components/AdminPortal/AdminPortal';
 import NotificationsPage from './pages/NotificationsPage';
 
 function App() {
@@ -16,7 +15,7 @@ function App() {
         <header className="header">
           <h1 className="gwendolyn-bold">🏡 SmartDaycare</h1>
           <p className="warning">
-            Disclaimer: The project is still work on progress. Which is why parent and staff pages are shown on the same site. Once the project is finished, it will be connected with their respective portals.
+            Module 3: Daily Activity Management & Parent Notifications
           </p>
 
           <div className="nav">
@@ -36,14 +35,6 @@ function App() {
                 👨‍👩‍👧 Parent Portal
               </button>
             </Link>
-            <Link to="/admin">
-              <button
-                className={`nav-btn-0 ${currentPage === 'admin' ? 'active' : ''}`}
-                onClick={() => setCurrentPage('admin')}
-              >
-                🛠 Admin Portal
-              </button>
-            </Link>
             <Link to="/notifications">
               <button
                 className={`nav-btn ${currentPage === 'notifications' ? 'active' : ''}`}
@@ -60,15 +51,14 @@ function App() {
             <Route path="/" element={<StaffPage staffId={staffId} childId={childId} />} />
             <Route path="/staff" element={<StaffPage staffId={staffId} childId={childId} />} />
             <Route path="/parent" element={<ParentPage childId={childId} />} />
-            <Route path="/admin" element={<AdminPortal />} />
             <Route path="/notifications" element={<NotificationsPage />} />
           </Routes>
         </main>
 
         <footer>
-          <p>CSE471 - System Analysis and Design | Feature 1: Daily Activity Management</p>
+          <p>CSE471 - System Analysis and Design | Module 3: Daily Activity Management & Parent Notifications</p>
           <p style={{ fontSize: '0.9rem', marginTop: '10px', opacity: '0.8' }}>
-            Powered by Texturina Typography
+            Powered by Texturina Typography | Database: 22299315
           </p>
         </footer>
       </div>

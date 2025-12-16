@@ -28,9 +28,11 @@ const activitySchema = new mongoose.Schema({
         type: String,
         default: []
     }],
+    // FIX: Use createdAt as timestamp for queries
     timestamp: {
         type: Date,
-        default: Date.now
+        default: Date.now,
+        index: true // Add index for faster queries
     },
     details: {
         mealType: {
@@ -59,6 +61,7 @@ const activitySchema = new mongoose.Schema({
 // Index for faster queries
 activitySchema.index({ staffId: 1, timestamp: -1 });
 activitySchema.index({ childId: 1, timestamp: -1 });
+activitySchema.index({ childId: 1, createdAt: -1 }); // Add index for createdAt
 
 const Activity = mongoose.model('Activity', activitySchema);
 export default Activity;

@@ -991,3 +991,122 @@ footer p {
         font-size: 1rem;
     }
 }
+
+/* Summary Section Improvements */
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.summary-item {
+    text-align: center;
+    padding: 25px 15px;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-radius: 15px;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    position: relative;
+    overflow: hidden;
+}
+
+.summary-item:hover {
+    transform: translateY(-5px);
+    background: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 100%);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.summary-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #a18a8a, #dbbfbf);
+}
+
+.summary-value {
+    font-size: 2.8rem;
+    font-weight: 800;
+    color: #2d3748;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+    line-height: 1;
+}
+
+.summary-label {
+    font-size: 1rem;
+    color: #4a5568;
+    margin-top: 8px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.summary-subtitle {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-top: 5px;
+    opacity: 0.8;
+}
+
+/* Loading and Error States */
+.loading-summary {
+    text-align: center;
+    padding: 40px;
+    color: #6b7280;
+}
+
+.loading-summary p {
+    margin-top: 10px;
+    font-size: 1.1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.error-summary {
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+    
+    .summary-item {
+        padding: 20px 10px;
+    }
+    
+    .summary-value {
+        font-size: 2.2rem;
+    }
+    
+    .summary-label {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .summary-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .summary-value {
+        font-size: 2.5rem;
+    }
+}
