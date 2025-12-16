@@ -1,9 +1,15 @@
-// backend/routes/activities.js - MODULE 3, FEATURE 1
-const express = require('express');
+import express from 'express';
+import multer from 'multer';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import Activity from '../models/Activity.js';
+import NotificationService from '../services/NotificationService.js';
+
 const router = express.Router();
-const multer = require('multer');
-const path = require('path');
-const Activity = require('../models/Activity');
+
+// Get __dirname equivalent in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -12,19 +18,19 @@ const storage = multer.diskStorage({
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = path.extname(file.originalname);
-        cb(null, 'activity-' + uniqueSuffix + ext);
+        const ext = join(file.originalname).split('.').pop();
+        cb(null, 'activity-' + uniqueSuffix + '.' + ext);
     }
 });
 
-const upload = multer({
+const upload = multer({ 
     storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         const allowedTypes = /jpeg|jpg|png|gif/;
         const mimetype = allowedTypes.test(file.mimetype);
-        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-
+        const extname = allowedTypes.test(join(file.originalname).toLowerCase());
+        
         if (mimetype && extname) {
             return cb(null, true);
         }
@@ -36,7 +42,7 @@ const upload = multer({
 router.post('/', upload.array('photos', 5), async (req, res) => {
     try {
         const { staffId, childId, type, title, description, ...details } = req.body;
-
+        
         // Validate required fields
         if (!staffId || !childId || !type || !title || !description) {
             return res.status(400).json({
@@ -59,14 +65,22 @@ router.post('/', upload.array('photos', 5), async (req, res) => {
             details: {
                 mealType: details.mealType || '',
                 napDuration: details.napDuration ? parseInt(details.napDuration) : undefined,
-                                      activityType: details.activityType || '',
-                                      mood: details.mood || '',
-                                      foodItems: details.foodItems ? details.foodItems.split(',').map(item => item.trim()) : [],
-                                      quantity: details.quantity || ''
+                activityType: details.activityType || '',
+                mood: details.mood || '',
+                foodItems: details.foodItems ? details.foodItems.split(',').map(item => item.trim()) : [],
+                quantity: details.quantity || ''
             }
         });
 
         await activity.save();
+
+        // Create notification for parent
+        try {
+            await NotificationService.createActivityNotification(staffId, childId, activity);
+        } catch (notificationError) {
+            console.warn('Failed to create notification:', notificationError);
+            // Don't fail the activity creation
+        }
 
         res.status(201).json({
             success: true,
@@ -89,7 +103,7 @@ router.get('/staff/:staffId', async (req, res) => {
     try {
         const { staffId } = req.params;
         const { type, limit = 20 } = req.query;
-
+        
         // Build query
         const query = { staffId };
         if (type && type !== 'all') {
@@ -98,8 +112,8 @@ router.get('/staff/:staffId', async (req, res) => {
 
         // Get activities
         const activities = await Activity.find(query)
-        .sort({ timestamp: -1 })
-        .limit(parseInt(limit));
+            .sort({ timestamp: -1 })
+            .limit(parseInt(limit));
 
         res.json({
             success: true,
@@ -121,7 +135,7 @@ router.get('/parent/:childId', async (req, res) => {
     try {
         const { childId } = req.params;
         const { filter = 'all', limit = 50 } = req.query;
-
+        
         // Build query
         const query = { childId };
         if (filter && filter !== 'all') {
@@ -130,8 +144,8 @@ router.get('/parent/:childId', async (req, res) => {
 
         // Get activities
         const activities = await Activity.find(query)
-        .sort({ timestamp: -1 })
-        .limit(parseInt(limit));
+            .sort({ timestamp: -1 })
+            .limit(parseInt(limit));
 
         res.json({
             success: true,
@@ -152,13 +166,13 @@ router.get('/parent/:childId', async (req, res) => {
 router.get('/summary/:childId', async (req, res) => {
     try {
         const { childId } = req.params;
-
+        
         // Get today's date range
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
-
+        
         // Get today's activities
         const activities = await Activity.find({
             childId,
@@ -197,18 +211,16 @@ router.get('/summary/:childId', async (req, res) => {
 router.delete('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-
+        
         const activity = await Activity.findByIdAndDelete(id);
-
+        
         if (!activity) {
             return res.status(404).json({
                 success: false,
                 message: 'Activity not found'
             });
         }
-
-        // TODO: Delete associated photos from filesystem
-
+        
         res.json({
             success: true,
             message: 'Activity deleted successfully'
@@ -223,4 +235,59 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-module.exports = router;
+// Emergency alert endpoint
+router.post('/:childId/emergency', async (req, res) => {
+    try {
+        const { childId } = req.params;
+        const { staffId, emergencyType, details, symptoms, severity } = req.body;
+        
+        const notification = await NotificationService.createEmergencyNotification(
+            childId,
+            emergencyType,
+            details,
+            symptoms,
+            severity
+        );
+        
+        res.json({
+            success: true,
+            message: 'Emergency notification sent to parent',
+            data: notification
+        });
+        
+    } catch (error) {
+        console.error('Error creating emergency notification:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to send emergency notification'
+        });
+    }
+});
+
+// Pickup reminder endpoint
+router.post('/:childId/pickup-reminder', async (req, res) => {
+    try {
+        const { childId } = req.params;
+        const { pickupTime } = req.body;
+        
+        const notification = await NotificationService.createPickupReminder(
+            childId,
+            pickupTime
+        );
+        
+        res.json({
+            success: true,
+            message: 'Pickup reminder scheduled',
+            data: notification
+        });
+        
+    } catch (error) {
+        console.error('Error creating pickup reminder:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to schedule pickup reminder'
+        });
+    }
+});
+
+export default router;

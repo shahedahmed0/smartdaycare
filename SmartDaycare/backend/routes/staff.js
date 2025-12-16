@@ -1,144 +1,101 @@
-// backend/routes/staff.js - MODULE 2, FEATURE 1
-const express = require('express');
-const router = express.Router();
-const Staff = require('../models/Staff');
+import express from 'express';
+import Staff from '../models/Staff.js';
 
-// CREATE Staff - Admin registers staff
+const router = express.Router();
+
+// Get all staff
+router.get('/', async (req, res) => {
+    try {
+        const staff = await Staff.find({}).select('-password');
+        res.json({
+            success: true,
+            staff
+        });
+    } catch (error) {
+        console.error('Error fetching staff:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch staff'
+        });
+    }
+});
+
+// Create new staff
 router.post('/', async (req, res) => {
     try {
         const { serial, name, email, password, phone, role, experience, joiningDate } = req.body;
-
-        // Validate required fields
-        if (!serial || !name || !email || !password || !phone || !role) {
+        
+        // Check if staff already exists
+        const existingStaff = await Staff.findOne({ $or: [{ serial }, { email }] });
+        if (existingStaff) {
             return res.status(400).json({
                 success: false,
-                message: 'Missing required fields'
+                message: 'Staff with this serial or email already exists'
             });
         }
-
-        // Check for existing staff with same serial or email
-        const existingStaff = await Staff.findOne({
-            $or: [{ serial }, { email }]
-        });
-
-        if (existingStaff) {
-            return res.status(409).json({
-                success: false,
-                message: 'Staff with this ID or email already exists'
-            });
-        }
-
-        // Create new staff
+        
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 10);
+        
         const staff = new Staff({
             serial,
             name,
             email,
-            password: password || 'default123',
+            password: hashedPassword,
             phone,
             role,
-            experience: experience ? parseInt(experience) : 0,
-                                joiningDate: joiningDate || new Date()
+            experience: parseInt(experience) || 0,
+            joiningDate: joiningDate || new Date()
         });
-
+        
         await staff.save();
-
+        
         // Remove password from response
         const staffResponse = staff.toObject();
         delete staffResponse.password;
-
+        
         res.status(201).json({
             success: true,
             message: 'Staff created successfully',
-            data: staffResponse
+            staff: staffResponse
         });
-
     } catch (error) {
         console.error('Error creating staff:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to create staff',
-            error: error.message
+            message: 'Failed to create staff'
         });
     }
 });
 
-// READ All Staff - Admin views staff list
-router.get('/', async (req, res) => {
-    try {
-        const staff = await Staff.find({})
-        .select('-password')
-        .sort({ createdAt: -1 });
-
-        res.json({
-            success: true,
-            count: staff.length,
-            data: staff
-        });
-
-    } catch (error) {
-        console.error('Error fetching staff:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch staff'
-        });
-    }
-});
-
-// READ Single Staff
-router.get('/:id', async (req, res) => {
-    try {
-        const staff = await Staff.findById(req.params.id).select('-password');
-
-        if (!staff) {
-            return res.status(404).json({
-                success: false,
-                message: 'Staff not found'
-            });
-        }
-
-        res.json({
-            success: true,
-            data: staff
-        });
-
-    } catch (error) {
-        console.error('Error fetching staff:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch staff'
-        });
-    }
-});
-
-// UPDATE Staff
+// Update staff
 router.put('/:id', async (req, res) => {
     try {
+        const { id } = req.params;
         const updates = req.body;
-
-        // Don't allow password update through this route
+        
         if (updates.password) {
-            delete updates.password;
+            updates.password = await bcrypt.hash(updates.password, 10);
         }
-
+        
         const staff = await Staff.findByIdAndUpdate(
-            req.params.id,
+            id,
             { $set: updates },
             { new: true, runValidators: true }
         ).select('-password');
-
+        
         if (!staff) {
             return res.status(404).json({
                 success: false,
                 message: 'Staff not found'
             });
         }
-
+        
         res.json({
             success: true,
             message: 'Staff updated successfully',
-            data: staff
+            staff
         });
-
     } catch (error) {
         console.error('Error updating staff:', error);
         res.status(500).json({
@@ -148,23 +105,23 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// DELETE Staff
+// Delete staff
 router.delete('/:id', async (req, res) => {
     try {
-        const staff = await Staff.findByIdAndDelete(req.params.id);
-
+        const { id } = req.params;
+        const staff = await Staff.findByIdAndDelete(id);
+        
         if (!staff) {
             return res.status(404).json({
                 success: false,
                 message: 'Staff not found'
             });
         }
-
+        
         res.json({
             success: true,
             message: 'Staff deleted successfully'
         });
-
     } catch (error) {
         console.error('Error deleting staff:', error);
         res.status(500).json({
@@ -174,12 +131,11 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-// Staff Login - For future authentication
+// Staff login
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
-
-        // Find staff by email
+        
         const staff = await Staff.findOne({ email });
         if (!staff) {
             return res.status(401).json({
@@ -187,26 +143,24 @@ router.post('/login', async (req, res) => {
                 message: 'Invalid credentials'
             });
         }
-
-        // Check password
-        const isValidPassword = await staff.comparePassword(password);
+        
+        const isValidPassword = await bcrypt.compare(password, staff.password);
         if (!isValidPassword) {
             return res.status(401).json({
                 success: false,
                 message: 'Invalid credentials'
             });
         }
-
+        
         // Remove password from response
         const staffResponse = staff.toObject();
         delete staffResponse.password;
-
+        
         res.json({
             success: true,
             message: 'Login successful',
-            data: staffResponse
+            staff: staffResponse
         });
-
     } catch (error) {
         console.error('Error logging in:', error);
         res.status(500).json({
@@ -216,4 +170,37 @@ router.post('/login', async (req, res) => {
     }
 });
 
-module.exports = router;
+// Assign children to staff
+router.post('/:staffId/assign', async (req, res) => {
+    try {
+        const { staffId } = req.params;
+        const { childIds } = req.body;
+        
+        const staff = await Staff.findByIdAndUpdate(
+            staffId,
+            { $addToSet: { assignedChildren: { $each: childIds } } },
+            { new: true }
+        ).select('-password');
+        
+        if (!staff) {
+            return res.status(404).json({
+                success: false,
+                message: 'Staff not found'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Children assigned successfully',
+            staff
+        });
+    } catch (error) {
+        console.error('Error assigning children:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to assign children'
+        });
+    }
+});
+
+export default router;

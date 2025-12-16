@@ -1,6 +1,5 @@
-// backend/models/Staff.js
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 const staffSchema = new mongoose.Schema({
     serial: {
@@ -39,8 +38,8 @@ const staffSchema = new mongoose.Schema({
     experience: {
         type: Number,
         default: 0,
-            min: 0,
-            max: 50
+        min: 0,
+        max: 50
     },
     joiningDate: {
         type: Date,
@@ -61,7 +60,7 @@ const staffSchema = new mongoose.Schema({
 // Hash password before saving
 staffSchema.pre('save', async function(next) {
     if (!this.isModified('password')) return next();
-
+    
     try {
         const salt = await bcrypt.genSalt(10);
         this.password = await bcrypt.hash(this.password, salt);
@@ -76,4 +75,5 @@ staffSchema.methods.comparePassword = async function(candidatePassword) {
     return await bcrypt.compare(candidatePassword, this.password);
 };
 
-module.exports = mongoose.model('Staff', staffSchema);
+const Staff = mongoose.model('Staff', staffSchema);
+export default Staff;

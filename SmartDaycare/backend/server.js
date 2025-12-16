@@ -1,10 +1,10 @@
-// backend/server.js
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const dotenv = require('dotenv');
-const path = require('path');
-const fs = require('fs');
+import express from 'express';
+import mongoose from 'mongoose';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import fs from 'fs';
 
 dotenv.config();
 
@@ -18,8 +18,12 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Get __dirname equivalent in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 // MongoDB Connection
-const MONGO_URI = 'mongodb+srv://burnedwanderer:404051@smartdaycare.kzo4jta.mongodb.net/?appName=SmartDaycare';
+const MONGO_URI = 'mongodb+srv://burnedwanderer:404051@smartdaycare.kzo4jta.mongodb.net/';
 
 mongoose.connect(MONGO_URI, {
     useNewUrlParser: true,
@@ -38,22 +42,24 @@ if (!fs.existsSync('uploads')) {
 }
 
 // Serve static files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(join(__dirname, 'uploads')));
 
-// Import Routes for Modules 2 & 3
-const activityRoutes = require('./routes/activities');
-const staffRoutes = require('./routes/staff');
+// Import Routes
+import activityRoutes from './routes/activities.js';
+import staffRoutes from './routes/staff.js';
+import notificationRoutes from './routes/notifications.js';
 
 // Use Routes
-app.use('/api/activities', activityRoutes);  // Module 3, Feature 1
-app.use('/api/staff', staffRoutes);          // Module 2, Feature 1
+app.use('/api/activities', activityRoutes);
+app.use('/api/staff', staffRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {
-    res.json({
+    res.json({ 
         status: 'healthy',
         message: 'Smart Daycare Backend is running',
-        modules: ['Module 2: Staff Management', 'Module 3: Activity Management'],
+        modules: ['Module 2: Staff Management', 'Module 3: Activity Management', 'Module 3: Notifications'],
         timestamp: new Date()
     });
 });
@@ -75,4 +81,5 @@ app.listen(PORT, () => {
     console.log(`📁 Modules loaded:`);
     console.log(`   • Module 2, Feature 1: Staff Management`);
     console.log(`   • Module 3, Feature 1: Activity Management & Photos`);
+    console.log(`   • Module 3, Feature 2: Parent Notifications`);
 });

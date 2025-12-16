@@ -1,5 +1,4 @@
-// backend/models/Activity.js
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const activitySchema = new mongoose.Schema({
     staffId: {
@@ -61,4 +60,5 @@ const activitySchema = new mongoose.Schema({
 activitySchema.index({ staffId: 1, timestamp: -1 });
 activitySchema.index({ childId: 1, timestamp: -1 });
 
-module.exports = mongoose.model('Activity', activitySchema);
+const Activity = mongoose.model('Activity', activitySchema);
+export default Activity;
