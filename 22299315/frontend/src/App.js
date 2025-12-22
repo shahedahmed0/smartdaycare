@@ -6,8 +6,8 @@ import NotificationsPage from './pages/NotificationsPage';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('staff');
-  const [staffId] = useState('STAFF001');
-  const [childId] = useState('CHILD001');
+  const [staffId] = useState('Jim Lindsay');
+  const [childId] = useState('Liam Ahmed');
 
   return (
     <Router>
