@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ActivityList from '../components/ActivityList';
 import NotificationBell from '../components/NotificationBell/NotificationBell';
+import ChatButton from '../components/ChatButton/ChatButton';
 
 const ParentPage = ({ childId }) => {
     const [filter, setFilter] = useState('all');
@@ -18,7 +19,10 @@ const ParentPage = ({ childId }) => {
                         <h2>📊 Today's Summary for Child {childId}</h2>
                         <p>Get an overview of your child's day</p>
                     </div>
-                    <NotificationBell parentId="PARENT001" />
+                    <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                        <NotificationBell parentId="PARENT001" />
+                        <ChatButton userId="PARENT001" userRole="parent" />
+                    </div>
                 </div>
                 <SummarySection childId={childId} />
             </div>

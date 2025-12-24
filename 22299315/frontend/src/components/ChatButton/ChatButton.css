@@ -1,0 +1,144 @@
+.chat-button-link {
+    text-decoration: none;
+}
+
+.chat-button-container {
+    position: relative;
+    display: inline-block;
+}
+
+.chat-button {
+    position: relative;
+    width: 50px;
+    height: 50px;
+    background: #a18a8a;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+    z-index: 100;
+    animation: float 3s ease-in-out infinite;
+}
+
+.chat-button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    background: #8b7a7a;
+}
+
+.chat-icon {
+    font-size: 1.5rem;
+}
+
+.chat-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #ef4444;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 600;
+    min-width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5px;
+    animation: pulse 1.5s infinite;
+    border: 2px solid white;
+}
+
+.online-indicator {
+    position: absolute;
+    bottom: 3px;
+    right: 3px;
+    width: 10px;
+    height: 10px;
+    background: #10b981;
+    border-radius: 50%;
+    border: 2px solid white;
+}
+
+.chat-tooltip {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    background: #2d3748;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 101;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.chat-tooltip::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    right: 15px;
+    width: 10px;
+    height: 10px;
+    background: #2d3748;
+    transform: rotate(45deg);
+}
+
+.chat-button-container:hover .chat-tooltip {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.tooltip-count {
+    color: #ef4444;
+    font-weight: 600;
+    margin-left: 5px;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* For floating chat button */
+.chat-button.floating {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+}
+
+.chat-button.floating .chat-icon {
+    font-size: 1.8rem;
+}
+
+@media (max-width: 768px) {
+    .chat-button.floating {
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+    }
+    
+    .chat-button.floating .chat-icon {
+        font-size: 1.5rem;
+    }
+    
+    .chat-tooltip {
+        display: none;
+    }
+}

@@ -3,6 +3,7 @@ import ActivityForm from '../components/ActivityForm';
 import ActivityList from '../components/ActivityList';
 import EmergencyAlert from '../components/EmergencyAlert/EmergencyAlert';
 import PickupReminder from '../components/PickupReminder/PickupReminder';
+import ChatButton from '../components/ChatButton/ChatButton';
 
 const StaffPage = ({ staffId, childId }) => {
     const [refreshKey, setRefreshKey] = useState(0);
@@ -26,7 +27,8 @@ const StaffPage = ({ staffId, childId }) => {
                         <h2>📝 Create Activity Log</h2>
                         <p className="mb-4">Staff: {staffId} | Child: {childId}</p>
                     </div>
-                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <ChatButton userId={staffId} userRole="staff" />
                         <PickupReminder childId={childId} />
                         <EmergencyAlert staffId={staffId} childId={childId} />
                     </div>
